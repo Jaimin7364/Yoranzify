@@ -1,0 +1,6 @@
+import Link from "next/link";
+import { Package } from "lucide-react";
+import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+const money = (value: number) => `₹${(value / 100).toLocaleString("en-IN")}`;
+export default async function OrdersPage() { const user = await requireUser("/account/orders"); const orders = await prisma.order.findMany({ where: { userId: user.id }, include: { items: true }, orderBy: { createdAt: "desc" } }); return <section className="container orders-page"><header><p className="eyebrow">My Yoranzify</p><h1>Your orders.</h1><p>Follow each piece from our studio to your door.</p></header>{orders.length ? <div className="customer-orders">{orders.map((order) => <Link href={`/account/orders/${order.id}`} key={order.id}><div><strong>{order.orderNumber}</strong><small>{new Date(order.createdAt).toLocaleDateString("en-IN")} · {order.items.reduce((sum, item) => sum + item.quantity, 0)} pieces</small></div><div><span className={`order-status ${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span><strong>{money(order.totalPaise)}</strong></div></Link>)}</div> : <div className="orders-empty"><Package /><h2>No orders yet.</h2><p>Your completed edits will appear here.</p><Link className="button button-dark" href="/shop">Explore the collection</Link></div>}</section>; }

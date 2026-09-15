@@ -1,0 +1,4 @@
+import { createHmac } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import { verifyCheckoutSignature, verifyWebhookSignature } from "./payments";
+describe("Razorpay signatures", () => { it("verifies checkout signatures against the server order ID", () => { const signature = createHmac("sha256", "secret").update("order_1|pay_1").digest("hex"); expect(verifyCheckoutSignature("order_1", "pay_1", signature, "secret")).toBe(true); expect(verifyCheckoutSignature("order_changed", "pay_1", signature, "secret")).toBe(false); }); it("verifies the untouched raw webhook body", () => { const raw = '{"event":"payment.captured"}'; const signature = createHmac("sha256", "hook").update(raw).digest("hex"); expect(verifyWebhookSignature(raw, signature, "hook")).toBe(true); expect(verifyWebhookSignature(`${raw} `, signature, "hook")).toBe(false); }); });

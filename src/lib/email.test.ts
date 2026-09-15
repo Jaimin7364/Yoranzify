@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest";
+import { renderEmail, retryDelay } from "./email";
+describe("email outbox", () => { it("escapes customer data and keeps safe links", () => { const mail = renderEmail("PASSWORD_RESET", { name: "<img src=x>", url: "https://shop.test/reset?token=abc" }); expect(mail.html).not.toContain("<img src=x>"); expect(mail.html).toContain("&lt;img"); expect(mail.text).toContain("https://shop.test/reset"); }); it("does not render unsafe action URLs", () => expect(renderEmail("WELCOME", { name: "Mira", url: "javascript:alert(1)" }).html).not.toContain("javascript:")); it("backs off retries with a one-day ceiling", () => { expect(retryDelay(1)).toBe(300000); expect(retryDelay(20)).toBe(86400000); }); });

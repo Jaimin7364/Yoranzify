@@ -1,0 +1,2 @@
+import type { MetadataRoute } from "next";
+export default function manifest(): MetadataRoute.Manifest { return { name: "Yoranzify", short_name: "Yoranzify", description: "Modern Indian fashion for expressive everyday living.", start_url: "/", display: "standalone", background_color: "#f5f2eb", theme_color: "#20231d", icons: [{ src: "/images/yoranzify-hero.png", sizes: "1200x630", type: "image/png" }] }; }

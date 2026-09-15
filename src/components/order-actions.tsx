@@ -1,0 +1,4 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+export function CancelOrderButton({ id }: { id: number }) { const router = useRouter(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); return <div>{message && <p className="form-error" role="status">{message}</p>}<button className="button order-cancel" disabled={busy} onClick={async () => { if (!confirm("Cancel this order and restore its stock?")) return; setBusy(true); const response = await fetch(`/api/account/orders/${id}`, { method: "DELETE" }); const body = await response.json(); if (!response.ok) { setMessage(body.error?.message || "Unable to cancel order."); setBusy(false); } else router.refresh(); }}>{busy ? "Cancelling…" : "Cancel order"}</button></div>; }

@@ -1,0 +1,5 @@
+import { OfferManager } from "@/components/offer-manager";
+import { prisma } from "@/lib/prisma";
+import { couponInclude, promotionInclude } from "@/lib/promotions";
+
+export default async function OffersPage() { const [coupons, promotions, products, categories, customers] = await Promise.all([prisma.coupon.findMany({ include: couponInclude, orderBy: { createdAt: "desc" } }), prisma.promotion.findMany({ include: promotionInclude, orderBy: { createdAt: "desc" } }), prisma.product.findMany({ where: { archivedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 100 }), prisma.category.findMany({ where: { archivedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 100 }), prisma.user.findMany({ where: { role: "CUSTOMER", isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 100 })]); return <main className="admin-main offers-page"><OfferManager initialCoupons={coupons} initialPromotions={promotions} products={products} categories={categories} customers={customers} /></main>; }

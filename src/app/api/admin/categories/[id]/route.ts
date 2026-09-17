@@ -15,7 +15,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const existing = await prisma.category.findUnique({ where: { id } }); if (!existing || existing.archivedAt) throw new ApiError(404, "CATEGORY_NOT_FOUND", "Category not found.");
     const input = categoryInputSchema.parse(await parseJson(request)); await validateCategoryRelations(id, input.parentId, input.imageMediaId);
     const slug = await uniqueCategorySlug(input.slug || input.name, id);
-    const category = await prisma.category.update({ where: { id }, data: { ...input, slug, description: input.description || null } });
+    const { shippingChargeRupees, freeShippingAboveRupees, ...categoryInput } = input;
+    const category = await prisma.category.update({ where: { id }, data: { ...categoryInput, shippingChargePaise: shippingChargeRupees === null ? null : Math.round(shippingChargeRupees * 100), freeShippingAbovePaise: freeShippingAboveRupees === null ? null : Math.round(freeShippingAboveRupees * 100), slug, description: input.description || null } });
     return jsonOk({ category });
   });
 }

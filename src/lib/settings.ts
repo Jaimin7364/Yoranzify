@@ -17,6 +17,7 @@ export const settingsInputSchema = z.object({
   currency: z.literal("INR"),
   shippingChargeRupees: z.coerce.number().min(0).max(10000),
   freeShippingAboveRupees: z.coerce.number().min(0).max(1_000_000),
+  platformFeeRupees: z.coerce.number().min(0).max(10000).optional(),
   lowStockThreshold: z.coerce.number().int().min(0).max(10000),
   codEnabled: z.boolean(),
   maintenanceMode: z.boolean(),
@@ -33,6 +34,7 @@ export function presentSettings(settings: NonNullable<Awaited<ReturnType<typeof 
     ...settings,
     shippingChargeRupees: settings.shippingChargePaise / 100,
     freeShippingAboveRupees: settings.freeShippingAbovePaise / 100,
+    platformFeeRupees: settings.platformFeePaise / 100,
     logoUrl: settings.logo ? `/api/media/${settings.logo.id}` : null,
     faviconUrl: settings.favicon ? `/api/media/${settings.favicon.id}` : null
   };

@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
     const input = categoryInputSchema.parse(await parseJson(request));
     await validateCategoryRelations(null, input.parentId, input.imageMediaId);
     const slug = await uniqueCategorySlug(input.slug || input.name);
-    const category = await prisma.category.create({ data: { ...input, slug, description: input.description || null } });
+    const { shippingChargeRupees, freeShippingAboveRupees, ...categoryInput } = input;
+    const category = await prisma.category.create({ data: { ...categoryInput, shippingChargePaise: shippingChargeRupees === null ? null : Math.round(shippingChargeRupees * 100), freeShippingAbovePaise: freeShippingAboveRupees === null ? null : Math.round(freeShippingAboveRupees * 100), slug, description: input.description || null } });
     return jsonOk({ category }, 201);
   });
 }

@@ -1,0 +1,3 @@
+ALTER TABLE `Category` ADD COLUMN `shippingChargePaise` INTEGER NULL, ADD COLUMN `freeShippingAbovePaise` INTEGER NULL;
+ALTER TABLE `SiteSetting` ADD COLUMN `platformFeePaise` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `Order` ADD COLUMN `platformFeePaise` INTEGER NOT NULL DEFAULT 0;

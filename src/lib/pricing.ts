@@ -46,3 +46,5 @@ export function validateCoupon(coupon: CouponRule, subtotalPaise: number, userId
   if (coupon.perUserLimit != null && coupon.userUsage >= coupon.perUserLimit) throw new ApiError(409, "COUPON_USER_LIMIT_REACHED", "You have already used this coupon the maximum number of times.");
   return discountPaise(subtotalPaise, coupon);
 }
+
+export function categoryShippingPaise(lines: { categoryId: number; subtotalPaise: number; shippingChargePaise: number | null; freeShippingAbovePaise: number | null }[], defaultCharge: number, defaultThreshold: number) { const totals = new Map<number, { subtotal: number; charge: number; threshold: number }>(); for (const line of lines) { const current = totals.get(line.categoryId) ?? { subtotal: 0, charge: line.shippingChargePaise ?? defaultCharge, threshold: line.freeShippingAbovePaise ?? defaultThreshold }; current.subtotal += line.subtotalPaise; totals.set(line.categoryId, current); } return Math.max(0, ...[...totals.values()].map((rule) => rule.subtotal >= rule.threshold ? 0 : rule.charge)); }

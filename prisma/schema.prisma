@@ -223,6 +223,8 @@ model Category {
   products         Product[]
   promotionTargets PromotionCategory[]
   displayOrder     Int                 @default(0)
+  shippingChargePaise Int?
+  freeShippingAbovePaise Int?
   isVisible        Boolean             @default(true)
   archivedAt       DateTime?
   createdAt        DateTime            @default(now())
@@ -428,6 +430,7 @@ model SiteSetting {
   currency               String      @default("INR") @db.Char(3)
   shippingChargePaise    Int         @default(9900)
   freeShippingAbovePaise Int         @default(199900)
+  platformFeePaise       Int         @default(0)
   lowStockThreshold      Int         @default(5)
   codEnabled             Boolean     @default(true)
   maintenanceMode        Boolean     @default(false)
@@ -555,6 +558,7 @@ model Order {
   couponCode               String?                @db.VarChar(40)
   couponDiscountPaise      Int                    @default(0)
   shippingPaise            Int                    @default(0)
+  platformFeePaise         Int                    @default(0)
   taxPaise                 Int                    @default(0)
   totalPaise               Int
   courierName              String?                @db.VarChar(100)

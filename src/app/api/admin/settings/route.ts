@@ -29,6 +29,7 @@ export async function PATCH(request: NextRequest) {
       storeName: input.storeName, contactNumber: input.contactNumber, whatsappNumber: input.whatsappNumber, contactEmail: input.contactEmail,
       address: input.address, instagramUrl: input.instagramUrl, facebookUrl: input.facebookUrl, gstNumber: input.gstNumber, currency: input.currency,
       shippingChargePaise: Math.round(input.shippingChargeRupees * 100), freeShippingAbovePaise: Math.round(input.freeShippingAboveRupees * 100),
+      ...(input.platformFeeRupees === undefined ? {} : { platformFeePaise: Math.round(input.platformFeeRupees * 100) }),
       lowStockThreshold: input.lowStockThreshold, codEnabled: input.codEnabled, maintenanceMode: input.maintenanceMode,
       logoMediaId: input.logoMediaId, faviconMediaId: input.faviconMediaId
     }, include: { logo: true, favicon: true } });

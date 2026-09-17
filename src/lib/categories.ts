@@ -9,6 +9,8 @@ export const categoryInputSchema = z.object({
   parentId: z.number().int().positive().nullable().default(null),
   imageMediaId: z.number().int().positive().nullable().default(null),
   displayOrder: z.number().int().min(0).max(100000).default(0),
+  shippingChargeRupees: z.coerce.number().min(0).max(10000).nullable().default(null),
+  freeShippingAboveRupees: z.coerce.number().min(0).max(1_000_000).nullable().default(null),
   isVisible: z.boolean().default(true)
 });
 
@@ -18,13 +20,13 @@ export function slugifyCategory(value: string) {
   return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120);
 }
 
-export type CategoryView = { id: number; name: string; slug: string; description: string | null; parentId: number | null; imageMediaId: number | null; imageUrl: string | null; displayOrder: number; isVisible: boolean; archivedAt: string | null; children: CategoryView[] };
+export type CategoryView = { id: number; name: string; slug: string; description: string | null; parentId: number | null; imageMediaId: number | null; imageUrl: string | null; displayOrder: number; shippingChargePaise: number | null; freeShippingAbovePaise: number | null; shippingChargeRupees: number | null; freeShippingAboveRupees: number | null; isVisible: boolean; archivedAt: string | null; children: CategoryView[] };
 
-type CategoryRow = { id: number; name: string; slug: string; description: string | null; parentId: number | null; imageMediaId: number | null; displayOrder: number; isVisible: boolean; archivedAt: Date | null };
+type CategoryRow = { id: number; name: string; slug: string; description: string | null; parentId: number | null; imageMediaId: number | null; displayOrder: number; shippingChargePaise?: number | null; freeShippingAbovePaise?: number | null; isVisible: boolean; archivedAt: Date | null };
 
 export function buildCategoryTree(rows: CategoryRow[]): CategoryView[] {
   const nodes = new Map<number, CategoryView>();
-  for (const row of rows) nodes.set(row.id, { ...row, imageUrl: row.imageMediaId ? `/api/media/${row.imageMediaId}` : null, archivedAt: row.archivedAt?.toISOString() ?? null, children: [] });
+  for (const row of rows) nodes.set(row.id, { ...row, shippingChargePaise: row.shippingChargePaise ?? null, freeShippingAbovePaise: row.freeShippingAbovePaise ?? null, shippingChargeRupees: row.shippingChargePaise == null ? null : row.shippingChargePaise / 100, freeShippingAboveRupees: row.freeShippingAbovePaise == null ? null : row.freeShippingAbovePaise / 100, imageUrl: row.imageMediaId ? `/api/media/${row.imageMediaId}` : null, archivedAt: row.archivedAt?.toISOString() ?? null, children: [] });
   const roots: CategoryView[] = [];
   for (const node of nodes.values()) { const parent = node.parentId ? nodes.get(node.parentId) : null; if (parent) parent.children.push(node); else roots.push(node); }
   const sort = (items: CategoryView[]) => items.sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name)).forEach((item) => sort(item.children));

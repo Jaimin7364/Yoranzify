@@ -211,24 +211,24 @@ model HomepageSection {
 }
 
 model Category {
-  id               Int                 @id @default(autoincrement())
-  name             String              @db.VarChar(100)
-  slug             String              @unique @db.VarChar(120)
-  description      String?             @db.Text
-  parentId         Int?
-  parent           Category?           @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children         Category[]          @relation("CategoryTree")
-  imageMediaId     Int?
-  image            MediaAsset?         @relation(fields: [imageMediaId], references: [id], onDelete: SetNull)
-  products         Product[]
-  promotionTargets PromotionCategory[]
-  displayOrder     Int                 @default(0)
-  shippingChargePaise Int?
+  id                     Int                 @id @default(autoincrement())
+  name                   String              @db.VarChar(100)
+  slug                   String              @unique @db.VarChar(120)
+  description            String?             @db.Text
+  parentId               Int?
+  parent                 Category?           @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children               Category[]          @relation("CategoryTree")
+  imageMediaId           Int?
+  image                  MediaAsset?         @relation(fields: [imageMediaId], references: [id], onDelete: SetNull)
+  products               Product[]
+  promotionTargets       PromotionCategory[]
+  displayOrder           Int                 @default(0)
+  shippingChargePaise    Int?
   freeShippingAbovePaise Int?
-  isVisible        Boolean             @default(true)
-  archivedAt       DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  isVisible              Boolean             @default(true)
+  archivedAt             DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@index([parentId, displayOrder])
   @@index([isVisible, archivedAt])
@@ -265,6 +265,8 @@ model Product {
   description         String?            @db.Text
   categoryId          Int
   category            Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  supplierId          Int?
+  supplier            Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   brand               String?            @db.VarChar(100)
   gender              ProductGender
   regularPricePaise   Int
@@ -288,9 +290,30 @@ model Product {
   updatedAt           DateTime           @updatedAt
 
   @@index([categoryId, status, archivedAt])
+  @@index([supplierId])
   @@index([gender, status])
   @@index([isFeatured, isBestSeller, isNewArrival])
   @@index([status, deliveredSalesCount, createdAt])
+}
+
+model Supplier {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(160)
+  legalName     String?   @db.VarChar(180)
+  gstNumber     String?   @db.VarChar(20)
+  contactName   String?   @db.VarChar(100)
+  contactNumber String?   @db.VarChar(20)
+  email         String?   @db.VarChar(191)
+  address       String    @db.Text
+  city          String    @db.VarChar(100)
+  state         String    @db.VarChar(100)
+  postalCode    String    @db.VarChar(12)
+  isActive      Boolean   @default(true)
+  products      Product[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isActive, name])
 }
 
 model ProductImage {
@@ -653,6 +676,18 @@ model OrderItem {
   couponDiscountPaise    Int            @default(0)
   taxPaise               Int            @default(0)
   lineTotalPaise         Int
+  gstPercent             Decimal        @default(0) @db.Decimal(5, 2)
+  hsnCode                String?        @db.VarChar(20)
+  supplierIdSnapshot     Int?
+  supplierName           String?        @db.VarChar(180)
+  supplierGstNumber      String?        @db.VarChar(20)
+  supplierContactName    String?        @db.VarChar(100)
+  supplierContactNumber  String?        @db.VarChar(20)
+  supplierEmail          String?        @db.VarChar(191)
+  supplierAddress        String?        @db.Text
+  supplierCity           String?        @db.VarChar(100)
+  supplierState          String?        @db.VarChar(100)
+  supplierPostalCode     String?        @db.VarChar(12)
 
   @@index([orderId])
   @@index([variantId])

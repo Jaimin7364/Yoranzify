@@ -12,7 +12,7 @@ const imageSchema = z.object({ mediaId: z.number().int().positive(), altText: z.
 
 export const productInputSchema = z.object({
   name: z.string().trim().min(2).max(180), slug: z.string().trim().max(200).optional().default(""), skuReference: z.string().trim().toUpperCase().regex(/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/).max(80),
-  shortDescription: z.string().trim().max(500).optional().default(""), description: z.string().trim().max(10000).optional().default(""), categoryId: z.number().int().positive(), brand: z.string().trim().max(100).optional().default(""),
+  shortDescription: z.string().trim().max(500).optional().default(""), description: z.string().trim().max(10000).optional().default(""), categoryId: z.number().int().positive(), supplierId: z.number().int().positive().nullable().default(null), brand: z.string().trim().max(100).optional().default(""),
   gender: z.enum(["WOMEN", "MEN", "UNISEX", "KIDS"]), regularPriceRupees: z.number().positive().max(10_000_000), salePriceRupees: z.number().positive().max(10_000_000).nullable().default(null), gstPercent: z.number().min(0).max(100), hsnCode: z.string().trim().regex(/^\d{4,8}$/, "HSN must contain 4–8 digits").or(z.literal("")),
   status: z.enum(["DRAFT", "ACTIVE", "INACTIVE"]), isFeatured: z.boolean(), isBestSeller: z.boolean(), isNewArrival: z.boolean(), seoTitle: z.string().trim().max(180).optional().default(""), seoDescription: z.string().trim().max(320).optional().default(""),
   images: z.array(imageSchema).max(12), variants: z.array(variantSchema).min(1, "Add at least one variant").max(200)
@@ -28,16 +28,17 @@ export function effectivePrice(regularPaise: number, salePaise: number | null, o
 
 export async function uniqueProductSlug(source: string, excludeId?: number) { const base = slugifyCategory(source); if (!base) throw new ApiError(400, "INVALID_SLUG", "Enter a product name that can form a URL."); let value = base, suffix = 2; while (await prisma.product.findFirst({ where: { slug: value, ...(excludeId ? { id: { not: excludeId } } : {}) }, select: { id: true } })) value = `${base.slice(0, 194)}-${suffix++}`; return value; }
 
-export const productInclude = { category: true, images: { include: { media: true }, orderBy: { position: "asc" as const } }, variants: { include: { color: true, size: true }, orderBy: [{ color: { name: "asc" as const } }, { size: { displayOrder: "asc" as const } }] } };
+export const productInclude = { category: true, supplier: true, images: { include: { media: true }, orderBy: { position: "asc" as const } }, variants: { include: { color: true, size: true }, orderBy: [{ color: { name: "asc" as const } }, { size: { displayOrder: "asc" as const } }] } };
 
 export async function saveProduct(raw: unknown, productId?: number) {
   const input = productInputSchema.parse(raw);
   const category = await prisma.category.findUnique({ where: { id: input.categoryId } });
   if (!category || category.archivedAt) throw new ApiError(400, "INVALID_CATEGORY", "Choose an active category.");
+  if (input.supplierId && !await prisma.supplier.findFirst({ where: { id: input.supplierId, isActive: true } })) throw new ApiError(400, "INVALID_SUPPLIER", "Choose an active supplier.");
   if (input.images.length) { const count = await prisma.mediaAsset.count({ where: { id: { in: input.images.map((i) => i.mediaId) }, kind: "PRODUCT" } }); if (count !== new Set(input.images.map((i) => i.mediaId)).size) throw new ApiError(400, "INVALID_PRODUCT_IMAGE", "One or more product images are invalid."); }
   const slug = await uniqueProductSlug(input.slug || input.name, productId);
   return prisma.$transaction(async (tx) => {
-    const data = { name: input.name, slug, skuReference: input.skuReference, shortDescription: input.shortDescription || null, description: input.description || null, categoryId: input.categoryId, brand: input.brand || null, gender: input.gender, regularPricePaise: Math.round(input.regularPriceRupees * 100), salePricePaise: input.salePriceRupees === null ? null : Math.round(input.salePriceRupees * 100), gstPercent: input.gstPercent, hsnCode: input.hsnCode || null, status: input.status, isFeatured: input.isFeatured, isBestSeller: input.isBestSeller, isNewArrival: input.isNewArrival, seoTitle: input.seoTitle || null, seoDescription: input.seoDescription || null };
+    const data = { name: input.name, slug, skuReference: input.skuReference, shortDescription: input.shortDescription || null, description: input.description || null, categoryId: input.categoryId, supplierId: input.supplierId, brand: input.brand || null, gender: input.gender, regularPricePaise: Math.round(input.regularPriceRupees * 100), salePricePaise: input.salePriceRupees === null ? null : Math.round(input.salePriceRupees * 100), gstPercent: input.gstPercent, hsnCode: input.hsnCode || null, status: input.status, isFeatured: input.isFeatured, isBestSeller: input.isBestSeller, isNewArrival: input.isNewArrival, seoTitle: input.seoTitle || null, seoDescription: input.seoDescription || null };
     const product = productId ? await tx.product.update({ where: { id: productId }, data }) : await tx.product.create({ data });
     if (productId) await tx.productImage.deleteMany({ where: { productId } });
     if (input.images.length) await tx.productImage.createMany({ data: input.images.map((image) => ({ ...image, productId: product.id })) });

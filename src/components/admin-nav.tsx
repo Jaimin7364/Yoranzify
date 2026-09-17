@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import { BadgePercent, BarChart3, Boxes, Images, LayoutDashboard, Mail, Package, Settings, ShoppingBag, Tags, Users } from "lucide-react";
+import { BadgePercent, BarChart3, Boxes, Building2, Images, LayoutDashboard, Mail, Package, Settings, ShoppingBag, Tags, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-const nav = [["Overview", "/admin", LayoutDashboard], ["Products", "/admin/products", ShoppingBag], ["Categories", "/admin/categories", Tags], ["Offers", "/admin/offers", BadgePercent], ["Orders", "/admin/orders", Package], ["Inventory", "/admin/inventory", Boxes], ["Customers", "/admin/customers", Users], ["Banners", "/admin/banners", Images], ["Email", "/admin/notifications", Mail], ["Analytics", "/admin/analytics", BarChart3], ["Settings", "/admin/settings", Settings]] as const;
+const nav = [["Overview", "/admin", LayoutDashboard], ["Products", "/admin/products", ShoppingBag], ["Categories", "/admin/categories", Tags], ["Suppliers", "/admin/suppliers", Building2], ["Offers", "/admin/offers", BadgePercent], ["Orders", "/admin/orders", Package], ["Inventory", "/admin/inventory", Boxes], ["Customers", "/admin/customers", Users], ["Banners", "/admin/banners", Images], ["Email", "/admin/notifications", Mail], ["Analytics", "/admin/analytics", BarChart3], ["Settings", "/admin/settings", Settings]] as const;
 
 export function AdminNav() {
   const pathname = usePathname();

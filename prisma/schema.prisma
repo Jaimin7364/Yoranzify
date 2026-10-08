@@ -41,6 +41,7 @@ model User {
   couponAccess       CouponCustomer[]
   orders             Order[]
   adminAudits        AdminAudit[]
+  reviews            Review[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
@@ -285,6 +286,7 @@ model Product {
   wishlistItems       WishlistItem[]
   promotionTargets    PromotionProduct[]
   orderItems          OrderItem[]
+  reviews             Review[]
   archivedAt          DateTime?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
@@ -558,6 +560,12 @@ enum FulfillmentMethod {
   SELF_DELIVERY
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
 model Order {
   id                       Int                    @id @default(autoincrement())
   orderNumber              String                 @unique @db.VarChar(32)
@@ -688,9 +696,30 @@ model OrderItem {
   supplierCity           String?        @db.VarChar(100)
   supplierState          String?        @db.VarChar(100)
   supplierPostalCode     String?        @db.VarChar(12)
+  review                 Review?
 
   @@index([orderId])
   @@index([variantId])
+}
+
+model Review {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  productId   Int
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  orderItemId Int          @unique
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  rating      Int
+  title       String?      @db.VarChar(120)
+  comment     String       @db.Text
+  status      ReviewStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([productId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model OrderStatusHistory {

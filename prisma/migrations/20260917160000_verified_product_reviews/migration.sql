@@ -1,0 +1,20 @@
+CREATE TABLE `Review` (
+  `id` INTEGER NOT NULL AUTO_INCREMENT,
+  `userId` INTEGER NOT NULL,
+  `productId` INTEGER NOT NULL,
+  `orderItemId` INTEGER NOT NULL,
+  `rating` INTEGER NOT NULL,
+  `title` VARCHAR(120) NULL,
+  `comment` TEXT NOT NULL,
+  `status` ENUM('PENDING', 'APPROVED', 'HIDDEN') NOT NULL DEFAULT 'PENDING',
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  UNIQUE INDEX `Review_orderItemId_key`(`orderItemId`),
+  INDEX `Review_productId_status_createdAt_idx`(`productId`, `status`, `createdAt`),
+  INDEX `Review_userId_createdAt_idx`(`userId`, `createdAt`),
+  INDEX `Review_status_createdAt_idx`(`status`, `createdAt`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `Review_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `Review_productId_fkey` FOREIGN KEY (`productId`) REFERENCES `Product`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `Review_orderItemId_fkey` FOREIGN KEY (`orderItemId`) REFERENCES `OrderItem`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

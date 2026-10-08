@@ -1,0 +1,10 @@
+"use client";
+import { FormEvent, useState } from "react";
+import { LoaderCircle, Star } from "lucide-react";
+
+type Existing = { rating: number; title: string | null; comment: string; status: string } | null;
+export function ProductReviewForm({ orderItemId, existing }: { orderItemId: number; existing: Existing }) {
+  const [rating, setRating] = useState(existing?.rating ?? 5); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(existing ? `Review status: ${existing.status.toLowerCase()}` : "");
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(""); const form = new FormData(event.currentTarget); const response = await fetch("/api/account/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderItemId, rating, title: String(form.get("title") || ""), comment: String(form.get("comment") || "") }) }); const body = await response.json(); setBusy(false); setMessage(response.ok ? "Thank you. Your review is awaiting approval." : body.error?.message || "Review could not be saved."); }
+  return <form className="review-form" onSubmit={submit}><div className="review-stars" aria-label={`${rating} out of 5 stars`}>{[1,2,3,4,5].map((value) => <button type="button" aria-label={`${value} star${value === 1 ? "" : "s"}`} className={value <= rating ? "active" : ""} onClick={() => setRating(value)} key={value}><Star size={22} fill={value <= rating ? "currentColor" : "none"} /></button>)}</div><input name="title" maxLength={120} defaultValue={existing?.title ?? ""} placeholder="Review title (optional)" /><textarea name="comment" minLength={10} maxLength={2000} rows={4} defaultValue={existing?.comment ?? ""} placeholder="How was the fit, quality and feel?" required />{message && <p role="status">{message}</p>}<button className="button button-dark" disabled={busy}>{busy ? <LoaderCircle className="spin" size={15} /> : <Star size={15} />}{existing ? "Update review" : "Submit review"}</button></form>;
+}

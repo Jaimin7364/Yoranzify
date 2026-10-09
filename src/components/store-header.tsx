@@ -47,6 +47,10 @@ export function StoreHeader({ storeName = "Yoranzify", freeShippingAboveRupees =
     {menuOpen && <aside className="mobile-menu open" aria-label="Mobile menu">
       <div className="mobile-menu-head"><span className={`brand ${logoUrl ? "brand-with-logo" : ""}`}>{logoUrl ? <Image src={logoUrl} alt={storeName} width={160} height={46} unoptimized /> : storeName.toUpperCase()}</span><button className="icon-button focus-ring" aria-label="Close menu" onClick={() => setMenuOpen(false)}><X /></button></div>
       <nav className="mobile-nav" aria-label="Mobile navigation"><Link onClick={() => setMenuOpen(false)} href="/shop?collection=new">New in</Link>{categories.map((category) => <Link onClick={() => setMenuOpen(false)} href={`/categories/${category.slug}`} key={category.slug}>{category.name}</Link>)}<Link onClick={() => setMenuOpen(false)} href="/shop?collection=sale">Sale</Link></nav>
+      <nav className="mobile-account-nav" aria-label="Account navigation">
+        <Link onClick={() => setMenuOpen(false)} href="/account"><UserRound size={20} /><span><strong>My account</strong><small>Profile, addresses and orders</small></span></Link>
+        <Link onClick={() => setMenuOpen(false)} href="/account/wishlist"><Heart size={20} /><span><strong>Wishlist</strong><small>Your saved styles</small></span></Link>
+      </nav>
     </aside>}
   </>;
 }

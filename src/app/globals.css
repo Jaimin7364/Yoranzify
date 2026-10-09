@@ -152,11 +152,16 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .footer-brand p { max-width: 330px; color: #666760; line-height: 1.7; font-size: .85rem; }
 .footer-bottom { margin-top: 55px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; color: #62645d; font-size: .7rem; }
 
-.mobile-menu { position: fixed; inset: 0; z-index: 60; background: var(--paper); padding: 24px; transform: translateX(-100%); transition: transform .35s ease; }
+.mobile-menu { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: var(--paper); padding: 24px; transform: translateX(-100%); transition: transform .35s ease; }
 .mobile-menu.open { transform: translateX(0); }
 .mobile-menu-head { display: flex; justify-content: space-between; align-items: center; }
-.mobile-nav { margin-top: 70px; display: grid; }
+.mobile-nav { margin-top: 52px; display: grid; }
 .mobile-nav a { padding: 16px 0; border-bottom: 1px solid var(--line); font: 400 2.4rem Georgia, serif; }
+.mobile-account-nav { margin-top: 36px; padding: 10px 0 24px; display: grid; border-top: 1px solid var(--line); }
+.mobile-account-nav a { padding: 18px 4px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--line); }
+.mobile-account-nav a > span { display: grid; gap: 4px; }
+.mobile-account-nav strong { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.mobile-account-nav small { color: #6c6e67; font-size: .68rem; }
 
 .admin-shell { min-height: 100vh; display: grid; grid-template-columns: 250px 1fr; background: #f3f2ed; }
 .admin-sidebar { padding: 32px 22px; background: #1d211b; color: white; }

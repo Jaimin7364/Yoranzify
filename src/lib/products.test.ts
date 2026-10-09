@@ -9,4 +9,6 @@ describe("product rules", () => {
   it("rejects a sale price above regular price", () => { expect(productInputSchema.safeParse({ ...base, salePriceRupees: 1400 }).success).toBe(false); });
   it("rejects duplicate SKUs and colour-size pairs", () => { const duplicate = { ...base, variants: [base.variants[0], { ...base.variants[0] }] }; expect(productInputSchema.safeParse(duplicate).success).toBe(false); });
   it("rejects negative variant stock", () => { expect(productInputSchema.safeParse({ ...base, variants: [{ ...base.variants[0], stockQuantity: -1 }] }).success).toBe(false); });
+  it("accepts an admin-defined colour", () => { expect(productInputSchema.safeParse({ ...base, variants: [{ ...base.variants[0], colorName: "Midnight Blue", colorHex: "#19324D" }] }).success).toBe(true); });
+  it("rejects an invalid custom colour value", () => { expect(productInputSchema.safeParse({ ...base, variants: [{ ...base.variants[0], colorName: "Midnight Blue", colorHex: "blue" }] }).success).toBe(false); });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateDiscountPercent, effectivePrice, productInputSchema } from "./products";
+import { calculateDiscountPercent, effectivePrice, productConflictError, productInputSchema } from "./products";
 
 const base = { name: "Oversized Tee", slug: "", skuReference: "TEE-OVR", shortDescription: "Soft cotton", description: "", categoryId: 1, brand: "Yoranzify", gender: "UNISEX", regularPriceRupees: 1299, salePriceRupees: 899, gstPercent: 5, hsnCode: "6109", status: "ACTIVE", isFeatured: false, isBestSeller: false, isNewArrival: true, seoTitle: "", seoDescription: "", images: [], variants: [{ colorName: "Black", colorHex: "#171814", sizeName: "M", sku: "TEE-BLK-M", priceOverrideRupees: null, stockQuantity: 10, lowStockThreshold: null, weightGrams: null, isActive: true }] };
 
@@ -11,4 +11,5 @@ describe("product rules", () => {
   it("rejects negative variant stock", () => { expect(productInputSchema.safeParse({ ...base, variants: [{ ...base.variants[0], stockQuantity: -1 }] }).success).toBe(false); });
   it("accepts an admin-defined colour", () => { expect(productInputSchema.safeParse({ ...base, variants: [{ ...base.variants[0], colorName: "Midnight Blue", colorHex: "#19324D" }] }).success).toBe(true); });
   it("rejects an invalid custom colour value", () => { expect(productInputSchema.safeParse({ ...base, variants: [{ ...base.variants[0], colorName: "Midnight Blue", colorHex: "blue" }] }).success).toBe(false); });
+  it("turns a duplicate database SKU into an actionable conflict", () => { const error = productConflictError({ code: "P2002", meta: { target: "ProductVariant_sku_key" } }); expect(error?.status).toBe(409); expect(error?.code).toBe("VARIANT_SKU_EXISTS"); expect(error?.message).toContain("unique SKU"); });
 });

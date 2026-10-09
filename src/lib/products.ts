@@ -26,6 +26,16 @@ export const productInputSchema = z.object({
 export function calculateDiscountPercent(regularPaise: number, salePaise: number | null) { return salePaise && salePaise < regularPaise ? Math.round((1 - salePaise / regularPaise) * 100) : 0; }
 export function effectivePrice(regularPaise: number, salePaise: number | null, overridePaise: number | null) { return overridePaise ?? salePaise ?? regularPaise; }
 
+export function productConflictError(error: unknown) {
+  const issue = error as { code?: string; meta?: { target?: unknown } };
+  if (issue.code !== "P2002") return null;
+  const target = JSON.stringify(issue.meta?.target ?? "");
+  if (target.includes("ProductVariant_sku_key") || target.includes('"sku"')) return new ApiError(409, "VARIANT_SKU_EXISTS", "That variant SKU is already used. Enter a unique SKU for every colour and size.");
+  if (target.includes("Product_skuReference_key") || target.includes("skuReference")) return new ApiError(409, "PRODUCT_SKU_EXISTS", "That product SKU reference is already used.");
+  if (target.includes("productId") && target.includes("colorId") && target.includes("sizeId")) return new ApiError(409, "VARIANT_OPTION_EXISTS", "That colour and size combination already exists for this product.");
+  return new ApiError(409, "PRODUCT_CONFLICT", "A product, SKU, colour, or size value is already in use.");
+}
+
 export async function uniqueProductSlug(source: string, excludeId?: number) { const base = slugifyCategory(source); if (!base) throw new ApiError(400, "INVALID_SLUG", "Enter a product name that can form a URL."); let value = base, suffix = 2; while (await prisma.product.findFirst({ where: { slug: value, ...(excludeId ? { id: { not: excludeId } } : {}) }, select: { id: true } })) value = `${base.slice(0, 194)}-${suffix++}`; return value; }
 
 export const productInclude = { category: true, supplier: true, images: { include: { media: true }, orderBy: { position: "asc" as const } }, variants: { include: { color: true, size: true }, orderBy: [{ color: { name: "asc" as const } }, { size: { displayOrder: "asc" as const } }] } };
@@ -36,8 +46,13 @@ export async function saveProduct(raw: unknown, productId?: number) {
   if (!category || category.archivedAt) throw new ApiError(400, "INVALID_CATEGORY", "Choose an active category.");
   if (input.supplierId && !await prisma.supplier.findFirst({ where: { id: input.supplierId, isActive: true } })) throw new ApiError(400, "INVALID_SUPPLIER", "Choose an active supplier.");
   if (input.images.length) { const count = await prisma.mediaAsset.count({ where: { id: { in: input.images.map((i) => i.mediaId) }, kind: "PRODUCT" } }); if (count !== new Set(input.images.map((i) => i.mediaId)).size) throw new ApiError(400, "INVALID_PRODUCT_IMAGE", "One or more product images are invalid."); }
+  const matchingVariants = await prisma.productVariant.findMany({ where: { sku: { in: input.variants.map((variant) => variant.sku) } }, select: { id: true, sku: true, productId: true, color: { select: { name: true } }, size: { select: { name: true } }, product: { select: { name: true } } } });
+  const conflictingVariant = matchingVariants.find((existing) => { const submitted = input.variants.find((variant) => variant.sku === existing.sku); if (!submitted || submitted.id === existing.id) return false; return !(productId === existing.productId && !submitted.id && submitted.colorName.toLowerCase() === existing.color.name.toLowerCase() && submitted.sizeName.toLowerCase() === existing.size.name.toLowerCase()); });
+  if (conflictingVariant) throw new ApiError(409, "VARIANT_SKU_EXISTS", `SKU ${conflictingVariant.sku} is already used by ${conflictingVariant.product.name}. Enter a unique SKU.`);
+  const conflictingReference = await prisma.product.findFirst({ where: { skuReference: input.skuReference, ...(productId ? { id: { not: productId } } : {}) }, select: { name: true } });
+  if (conflictingReference) throw new ApiError(409, "PRODUCT_SKU_EXISTS", `That product SKU reference is already used by ${conflictingReference.name}.`);
   const slug = await uniqueProductSlug(input.slug || input.name, productId);
-  return prisma.$transaction(async (tx) => {
+  try { return await prisma.$transaction(async (tx) => {
     const data = { name: input.name, slug, skuReference: input.skuReference, shortDescription: input.shortDescription || null, description: input.description || null, categoryId: input.categoryId, supplierId: input.supplierId, brand: input.brand || null, gender: input.gender, regularPricePaise: Math.round(input.regularPriceRupees * 100), salePricePaise: input.salePriceRupees === null ? null : Math.round(input.salePriceRupees * 100), gstPercent: input.gstPercent, hsnCode: input.hsnCode || null, status: input.status, isFeatured: input.isFeatured, isBestSeller: input.isBestSeller, isNewArrival: input.isNewArrival, seoTitle: input.seoTitle || null, seoDescription: input.seoDescription || null };
     const product = productId ? await tx.product.update({ where: { id: productId }, data }) : await tx.product.create({ data });
     if (productId) await tx.productImage.deleteMany({ where: { productId } });
@@ -52,13 +67,19 @@ export async function saveProduct(raw: unknown, productId?: number) {
         const updated = await tx.productVariant.update({ where: { id: variant.id }, data: variantData }); kept.push(updated.id);
         const delta = variant.stockQuantity - existing.stockQuantity; if (delta) await tx.productVariant.update({ where: { id: updated.id }, data: { stockQuantity: variant.stockQuantity } }).then(() => tx.inventoryMovement.create({ data: { variantId: updated.id, delta, balance: variant.stockQuantity, reason: "CORRECTION", note: "Stock changed in product editor" } }));
       } else {
-        const created = await tx.productVariant.create({ data: { ...variantData, productId: product.id, stockQuantity: variant.stockQuantity } }); kept.push(created.id);
-        if (variant.stockQuantity) await tx.inventoryMovement.create({ data: { variantId: created.id, delta: variant.stockQuantity, balance: variant.stockQuantity, reason: "INITIAL", note: "Initial product stock" } });
+        const reusable = await tx.productVariant.findUnique({ where: { productId_colorId_sizeId: { productId: product.id, colorId: color.id, sizeId: size.id } } });
+        if (reusable) {
+          const restored = await tx.productVariant.update({ where: { id: reusable.id }, data: { ...variantData, stockQuantity: variant.stockQuantity, isActive: true } }); kept.push(restored.id);
+          const delta = variant.stockQuantity - reusable.stockQuantity; if (delta) await tx.inventoryMovement.create({ data: { variantId: restored.id, delta, balance: variant.stockQuantity, reason: "CORRECTION", note: "Variant restored in product editor" } });
+        } else {
+          const created = await tx.productVariant.create({ data: { ...variantData, productId: product.id, stockQuantity: variant.stockQuantity } }); kept.push(created.id);
+          if (variant.stockQuantity) await tx.inventoryMovement.create({ data: { variantId: created.id, delta: variant.stockQuantity, balance: variant.stockQuantity, reason: "INITIAL", note: "Initial product stock" } });
+        }
       }
     }
     if (productId) await tx.productVariant.updateMany({ where: { productId, id: { notIn: kept } }, data: { isActive: false } });
     return tx.product.findUniqueOrThrow({ where: { id: product.id }, include: productInclude });
-  });
+  }); } catch (error) { throw productConflictError(error) ?? error; }
 }
 
 export async function adjustInventory(variantId: number, delta: number, reason: "RESTOCK" | "CORRECTION", note: string, actorId: number) {

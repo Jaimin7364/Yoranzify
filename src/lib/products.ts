@@ -47,7 +47,7 @@ export async function saveProduct(raw: unknown, productId?: number) {
   if (input.supplierId && !await prisma.supplier.findFirst({ where: { id: input.supplierId, isActive: true } })) throw new ApiError(400, "INVALID_SUPPLIER", "Choose an active supplier.");
   if (input.images.length) { const count = await prisma.mediaAsset.count({ where: { id: { in: input.images.map((i) => i.mediaId) }, kind: "PRODUCT" } }); if (count !== new Set(input.images.map((i) => i.mediaId)).size) throw new ApiError(400, "INVALID_PRODUCT_IMAGE", "One or more product images are invalid."); }
   const matchingVariants = await prisma.productVariant.findMany({ where: { sku: { in: input.variants.map((variant) => variant.sku) } }, select: { id: true, sku: true, productId: true, color: { select: { name: true } }, size: { select: { name: true } }, product: { select: { name: true } } } });
-  const conflictingVariant = matchingVariants.find((existing) => { const submitted = input.variants.find((variant) => variant.sku === existing.sku); if (!submitted || submitted.id === existing.id) return false; return !(productId === existing.productId && !submitted.id && submitted.colorName.toLowerCase() === existing.color.name.toLowerCase() && submitted.sizeName.toLowerCase() === existing.size.name.toLowerCase()); });
+  const conflictingVariant = matchingVariants.find((existing) => { const submitted = input.variants.find((variant) => variant.sku === existing.sku); if (!submitted || submitted.id === existing.id) return false; return productId !== existing.productId || Boolean(submitted.id); });
   if (conflictingVariant) throw new ApiError(409, "VARIANT_SKU_EXISTS", `SKU ${conflictingVariant.sku} is already used by ${conflictingVariant.product.name}. Enter a unique SKU.`);
   const conflictingReference = await prisma.product.findFirst({ where: { skuReference: input.skuReference, ...(productId ? { id: { not: productId } } : {}) }, select: { name: true } });
   if (conflictingReference) throw new ApiError(409, "PRODUCT_SKU_EXISTS", `That product SKU reference is already used by ${conflictingReference.name}.`);
@@ -67,7 +67,12 @@ export async function saveProduct(raw: unknown, productId?: number) {
         const updated = await tx.productVariant.update({ where: { id: variant.id }, data: variantData }); kept.push(updated.id);
         const delta = variant.stockQuantity - existing.stockQuantity; if (delta) await tx.productVariant.update({ where: { id: updated.id }, data: { stockQuantity: variant.stockQuantity } }).then(() => tx.inventoryMovement.create({ data: { variantId: updated.id, delta, balance: variant.stockQuantity, reason: "CORRECTION", note: "Stock changed in product editor" } }));
       } else {
-        const reusable = await tx.productVariant.findUnique({ where: { productId_colorId_sizeId: { productId: product.id, colorId: color.id, sizeId: size.id } } });
+        const [matchingCombination, matchingSku] = await Promise.all([
+          tx.productVariant.findUnique({ where: { productId_colorId_sizeId: { productId: product.id, colorId: color.id, sizeId: size.id } } }),
+          tx.productVariant.findUnique({ where: { sku: variant.sku } })
+        ]);
+        if (matchingCombination && matchingSku && matchingCombination.id !== matchingSku.id) throw new ApiError(409, "VARIANT_RESTORE_CONFLICT", `The deleted ${variant.colorName} / ${variant.sizeName} variant and SKU ${variant.sku} belong to different old variants. Use the SKU previously assigned to this colour and size, or enter a new SKU.`);
+        const reusable = matchingCombination ?? (matchingSku?.productId === product.id ? matchingSku : null);
         if (reusable) {
           const restored = await tx.productVariant.update({ where: { id: reusable.id }, data: { ...variantData, stockQuantity: variant.stockQuantity, isActive: true } }); kept.push(restored.id);
           const delta = variant.stockQuantity - reusable.stockQuantity; if (delta) await tx.inventoryMovement.create({ data: { variantId: restored.id, delta, balance: variant.stockQuantity, reason: "CORRECTION", note: "Variant restored in product editor" } });

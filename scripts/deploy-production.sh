@@ -20,6 +20,16 @@ npx prisma migrate deploy
 NODE_OPTIONS="--max-old-space-size=1536" npm run build
 sudo systemctl restart "$SERVICE_NAME"
 sudo systemctl is-active --quiet "$SERVICE_NAME"
-curl --fail --silent --show-error http://127.0.0.1:3000/api/health
-echo
-echo "Yoranzify deployment completed successfully."
+
+for attempt in {1..30}; do
+  if curl --fail --silent http://127.0.0.1:3000/api/health; then
+    echo
+    echo "Yoranzify deployment completed successfully."
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "Deployment failed: Yoranzify did not become healthy within 30 seconds."
+sudo systemctl status "$SERVICE_NAME" --no-pager
+exit 1
